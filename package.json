@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "start": "node index.js"
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",
@@ -19,7 +19,11 @@
   },
   "homepage": "https://github.com/benedikt-buchert/tracking_validator#readme",
   "devDependencies": {
-    "eslint": "^9.39.2"
+    "@babel/core": "^7.28.6",
+    "@babel/preset-env": "^7.28.6",
+    "babel-jest": "^30.2.0",
+    "eslint": "^9.39.2",
+    "jest": "^30.2.0"
   },
   "dependencies": {
     "fastify": "^5.6.2"
