@@ -1,6 +1,6 @@
 import { build_server } from "../server.js";
 
-describe("GET /", () => {
+describe("GET /health", () => {
   let server;
   beforeAll(async () => {
     server = build_server();
@@ -14,10 +14,10 @@ describe("GET /", () => {
   it("responds with json", async () => {
     const response = await server.inject({
       method: "GET",
-      url: "/",
+      url: "/health",
     });
     expect(response.statusCode).toBe(200);
     expect(response.headers["content-type"]).toMatch(/json/);
-    expect(JSON.parse(response.payload)).toEqual({ hello: "world" });
+    expect(JSON.parse(response.payload)).toEqual({ status: "ok" });
   });
 });
