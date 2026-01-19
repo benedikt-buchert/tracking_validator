@@ -59,7 +59,7 @@ describe("POST /v1/validate/remote", () => {
   });
 
   it("handles schema processing errors", async () => {
-    getSchema.mockRejectedValue(new Error("Failed to process schema"));
+    getSchema.mockRejectedValue(new Error("Failed to fetch"));
 
     const response = await server.inject({
       method: "POST",
@@ -67,9 +67,9 @@ describe("POST /v1/validate/remote", () => {
       payload: { name: "test" },
     });
 
-    expect(response.statusCode).toBe(500);
+    expect(response.statusCode).toBe(400);
     expect(JSON.parse(response.payload)).toEqual({
-      error: "Failed to process schema",
+      error: "Failed to fetch",
     });
   });
 });

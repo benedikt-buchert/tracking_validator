@@ -31,7 +31,7 @@ export async function processSchema(filePath) {
 
     return mergedSchema;
   } catch (err) {
-    if (err.name === "HTTPError") {
+    if (err.status) {
       throw new Error(
         `Failed to fetch schema from ${filePath}. Status: ${err.status}`,
       );
