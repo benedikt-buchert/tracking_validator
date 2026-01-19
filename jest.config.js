@@ -1,3 +1,4 @@
 export default {
-  testEnvironment: "node",
+  testEnvironment: "jest-environment-node",
+  transform: {},
 };

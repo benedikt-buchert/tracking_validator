@@ -1,7 +1,9 @@
-import server from "../source/index.js";
+import { build_server } from "../server.js";
 
 describe("GET /", () => {
+  let server;
   beforeAll(async () => {
+    server = build_server();
     await server.ready();
   });
 
