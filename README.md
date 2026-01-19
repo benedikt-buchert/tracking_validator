@@ -87,7 +87,7 @@ The application will be available at `http://localhost:3000`.
     -d '{
       "type": "Point"
     }'
-  ```
+    ```
     ```json
     {
       "valid":false,
