@@ -52,21 +52,31 @@ The application will be available at `http://localhost:3000`.
 
 ### Remote Schema Validation
 
-- **POST** `/v1/validate/remote?schema_url=<schema_url>`
+- **POST** `/v1/validate/remote`
 
-  Validates a JSON payload in the request body against a remote schema specified in the `schema_url` query parameter.
+  Validates a JSON payload in the request body against a remote schema. The schema can be provided in two ways:
 
-  **Query Parameters:**
-  - `schema_url` (string, required): The URL of the JSON schema to validate against. The URL must match the `SCHEMA_URL_PATTERN` environment variable.
+  1.  **`schema_url` query parameter:** The URL of the JSON schema to validate against.
+  2.  **`$schema` key in the request body:** The URL of the JSON schema to validate against.
 
-  **Request Body:**
-  - The JSON payload to validate.
+  If both are provided, the `$schema` key in the body takes precedence. The schema URL must match the `SCHEMA_URL_PATTERN` environment variable.
 
-  **Example Request:**
+  **Example Request with `schema_url` query parameter:**
   ```bash
   curl -X POST 'http://localhost:3000/v1/validate/remote?schema_url=https://geojson.org/schema/GeoJSON.json' \
   -H 'Content-Type: application/json' \
   -d '{
+    "type": "Point",
+    "coordinates": [102.0, 0.5]
+  }'
+  ```
+
+  **Example Request with `$schema` in body:**
+  ```bash
+  curl -X POST 'http://localhost:3000/v1/validate/remote' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "$schema": "https://geojson.org/schema/GeoJSON.json",
     "type": "Point",
     "coordinates": [102.0, 0.5]
   }'
@@ -81,212 +91,58 @@ The application will be available at `http://localhost:3000`.
     }
     ```
   - For an invalid payload:
-    ```bash
-    url -X POST 'http://localhost:3000/v1/validate/remote?schema_url=https://geojson.org/schema/GeoJSON.json' \
-    -H 'Content-Type: application/json' \
-    -d '{
-      "type": "Point"
-    }'
-    ```
     ```json
     {
       "valid":false,
-      "errors":[
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/0/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"coordinates"
-            },
-            "message":"must have required property 'coordinates'"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/1/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"coordinates"
-            },
-            "message":"must have required property 'coordinates'"
-          },
-          {
-            "instancePath":"/type",
-            "schemaPath":"#/oneOf/1/properties/type/enum",
-            "keyword":"enum",
-            "params":{
-                "allowedValues":[
-                  "LineString"
-                ]
-            },
-            "message":"must be equal to one of the allowed values"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/2/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"coordinates"
-            },
-            "message":"must have required property 'coordinates'"
-          },
-          {
-            "instancePath":"/type",
-            "schemaPath":"#/oneOf/2/properties/type/enum",
-            "keyword":"enum",
-            "params":{
-                "allowedValues":[
-                  "Polygon"
-                ]
-            },
-            "message":"must be equal to one of the allowed values"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/3/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"coordinates"
-            },
-            "message":"must have required property 'coordinates'"
-          },
-          {
-            "instancePath":"/type",
-            "schemaPath":"#/oneOf/3/properties/type/enum",
-            "keyword":"enum",
-            "params":{
-                "allowedValues":[
-                  "MultiPoint"
-                ]
-            },
-            "message":"must be equal to one of the allowed values"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/4/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"coordinates"
-            },
-            "message":"must have required property 'coordinates'"
-          },
-          {
-            "instancePath":"/type",
-            "schemaPath":"#/oneOf/4/properties/type/enum",
-            "keyword":"enum",
-            "params":{
-                "allowedValues":[
-                  "MultiLineString"
-                ]
-            },
-            "message":"must be equal to one of the allowed values"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/5/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"coordinates"
-            },
-            "message":"must have required property 'coordinates'"
-          },
-          {
-            "instancePath":"/type",
-            "schemaPath":"#/oneOf/5/properties/type/enum",
-            "keyword":"enum",
-            "params":{
-                "allowedValues":[
-                  "MultiPolygon"
-                ]
-            },
-            "message":"must be equal to one of the allowed values"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/6/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"geometries"
-            },
-            "message":"must have required property 'geometries'"
-          },
-          {
-            "instancePath":"/type",
-            "schemaPath":"#/oneOf/6/properties/type/enum",
-            "keyword":"enum",
-            "params":{
-                "allowedValues":[
-                  "GeometryCollection"
-                ]
-            },
-            "message":"must be equal to one of the allowed values"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/7/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"properties"
-            },
-            "message":"must have required property 'properties'"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/7/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"geometry"
-            },
-            "message":"must have required property 'geometry'"
-          },
-          {
-            "instancePath":"/type",
-            "schemaPath":"#/oneOf/7/properties/type/enum",
-            "keyword":"enum",
-            "params":{
-                "allowedValues":[
-                  "Feature"
-                ]
-            },
-            "message":"must be equal to one of the allowed values"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf/8/required",
-            "keyword":"required",
-            "params":{
-                "missingProperty":"features"
-            },
-            "message":"must have required property 'features'"
-          },
-          {
-            "instancePath":"/type",
-            "schemaPath":"#/oneOf/8/properties/type/enum",
-            "keyword":"enum",
-            "params":{
-                "allowedValues":[
-                  "FeatureCollection"
-                ]
-            },
-            "message":"must be equal to one of the allowed values"
-          },
-          {
-            "instancePath":"",
-            "schemaPath":"#/oneOf",
-            "keyword":"oneOf",
-            "params":{
-                "passingSchemas":null
-            },
-            "message":"must match exactly one schema in oneOf"
-          }
-      ]
+      "errors": [ ... ]
     }
     ```
 
   **Error Response (400 Bad Request):**
-  - If the `schema_url` is not reachable or invalid:
+  - If the schema is not reachable or invalid:
     ```json
     {
       "error": "Failed to fetch schema from <schema_url>. Status: 404"
     }
     ```
+
+## Browser Injection
+
+The `inject.js` script can be used to inject the `dataLayer.js` script into a website. This is useful for testing the validator with a live website.
+
+```javascript
+// This script can be pasted into a browser's developer console to inject the dataLayer.js script into a website.
+// The script assumes that the tracking_validation service is running on http://localhost:3000.
+// If the service is running on a different URL, you need to update the script.src accordingly.
+
+(function() {
+    console.log('Injecting dataLayer.js script...');
+    var script = document.createElement('script');
+    script.src = 'http://localhost:3000/static/dataLayer.js?schema_url=https://tracking-docs-demo.buchert.digital/schemas/1.2.0/event-reference.json';
+    script.onload = function() {
+        console.log('dataLayer.js script injected successfully.');
+    };
+    script.onerror = function() {
+        console.error('Failed to inject dataLayer.js script.');
+    };
+    document.body.appendChild(script);
+})();
+```
+
+## Google Tag Manager Template
+
+A Google Tag Manager (GTM) template is available to easily integrate the tracking validator with your GTM setup. You can find the template in this repository: `DataLayerValidator.tpl`.
+
+To use the template, you need to import it into your GTM container:
+
+1.  In your GTM container, go to **Templates**.
+2.  Click **New** under **Tag Templates**.
+3.  Click the three dots in the top right corner and select **Import**.
+4.  Select the `DataLayerValidator.tpl` file from this repository.
+5.  Save the template.
+
+### Permissions
+
+When using the GTM template, you need to grant the following permissions:
+
+*   **Injects Scripts:** To inject the `dataLayer.js` script. Update the domain to match the server domain where the tracking validator service is running.
