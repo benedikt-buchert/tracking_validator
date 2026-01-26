@@ -1,9 +1,15 @@
 import path from "node:path";
 import fastifyAutoload from "@fastify/autoload";
-import { getSchema } from "./schema.js";
+import fastifyStatic from "@fastify/static";
+import fastifyCors from "@fastify/cors";
 
 export default async function serviceApp(fastify, opts) {
   delete opts.skipOverride;
+
+  // Register CORS plugin
+  fastify.register(fastifyCors, {
+    origin: new RegExp(process.env.CORS_ORIGIN_REGEX || ".*"),
+  });
 
   // This loads all plugins defined in routes
   // define your routes in one of these
@@ -11,7 +17,12 @@ export default async function serviceApp(fastify, opts) {
     dir: path.join(import.meta.dirname, "routes"),
     autoHooks: true,
     cascadeHooks: true,
-    options: { getSchema, ...opts },
+    options: { ...opts },
+  });
+
+  fastify.register(fastifyStatic, {
+    root: path.join(import.meta.dirname, "static"),
+    prefix: "/static",
   });
 
   fastify.setErrorHandler((err, request, reply) => {

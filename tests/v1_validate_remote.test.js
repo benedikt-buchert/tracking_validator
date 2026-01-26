@@ -3,10 +3,10 @@ import { jest } from "@jest/globals";
 
 describe("POST /v1/validate/remote", () => {
   let server;
-  const getSchema = jest.fn();
+  const processSchema = jest.fn();
 
   beforeEach(async () => {
-    server = build_server({ getSchema });
+    server = build_server({ processSchema });
     await server.ready();
   });
 
@@ -16,7 +16,7 @@ describe("POST /v1/validate/remote", () => {
   });
 
   it("returns a validation success", async () => {
-    getSchema.mockResolvedValue({
+    processSchema.mockResolvedValue({
       type: "object",
       properties: {
         name: {
@@ -37,7 +37,7 @@ describe("POST /v1/validate/remote", () => {
   });
 
   it("returns a validation failure", async () => {
-    getSchema.mockResolvedValue({
+    processSchema.mockResolvedValue({
       type: "object",
       properties: {
         name: {
@@ -59,7 +59,7 @@ describe("POST /v1/validate/remote", () => {
   });
 
   it("handles schema processing errors", async () => {
-    getSchema.mockRejectedValue(new Error("Failed to fetch"));
+    processSchema.mockRejectedValue(new Error("Failed to fetch"));
 
     const response = await server.inject({
       method: "POST",
