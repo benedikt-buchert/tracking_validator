@@ -1,9 +1,8 @@
 import { createValidator } from "../validator.js";
-import { processSchema as defaultProcessSchema } from "../processSchema.js";
+import defaultLoadSchema from "../loadSchema.js";
 
 const plugin = async (fastify, opts) => {
-  const { processSchema = defaultProcessSchema } = opts;
-
+  const { loadSchema = defaultLoadSchema } = opts;
   const schema = {
     oneOf: [
       {
@@ -54,8 +53,8 @@ const plugin = async (fastify, opts) => {
       const validationData = body_schema_url ? dataToValidate : request.body;
 
       try {
-        const mainSchema = await processSchema(schema_url);
-        const validator = createValidator(mainSchema);
+        const mainSchema = await loadSchema(schema_url);
+        const validator = await createValidator(mainSchema);
         const result = validator(validationData);
         reply.send(result);
       } catch (error) {

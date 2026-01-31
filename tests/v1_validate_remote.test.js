@@ -3,10 +3,10 @@ import { jest } from "@jest/globals";
 
 describe("POST /v1/validate/remote", () => {
   let server;
-  const processSchema = jest.fn();
+  const loadSchema = jest.fn();
 
   beforeEach(async () => {
-    server = build_server({ processSchema });
+    server = build_server({ loadSchema });
     await server.ready();
   });
 
@@ -17,7 +17,7 @@ describe("POST /v1/validate/remote", () => {
 
   describe("with schema_url in query", () => {
     it("returns a validation success", async () => {
-      processSchema.mockResolvedValue({
+      loadSchema.mockResolvedValue({
         type: "object",
         properties: {
           name: {
@@ -38,7 +38,7 @@ describe("POST /v1/validate/remote", () => {
     });
 
     it("returns a validation failure", async () => {
-      processSchema.mockResolvedValue({
+      loadSchema.mockResolvedValue({
         type: "object",
         properties: {
           name: {
@@ -60,7 +60,7 @@ describe("POST /v1/validate/remote", () => {
     });
 
     it("handles schema processing errors", async () => {
-      processSchema.mockRejectedValue(new Error("Failed to fetch"));
+      loadSchema.mockRejectedValue(new Error("Failed to fetch"));
 
       const response = await server.inject({
         method: "POST",
@@ -77,7 +77,7 @@ describe("POST /v1/validate/remote", () => {
 
   describe("with $schema in body", () => {
     it("returns a validation success", async () => {
-      processSchema.mockResolvedValue({
+      loadSchema.mockResolvedValue({
         type: "object",
         properties: {
           name: {
@@ -101,7 +101,7 @@ describe("POST /v1/validate/remote", () => {
     });
 
     it("returns a validation failure", async () => {
-      processSchema.mockResolvedValue({
+      loadSchema.mockResolvedValue({
         type: "object",
         properties: {
           name: {
@@ -126,7 +126,7 @@ describe("POST /v1/validate/remote", () => {
     });
 
     it("prefers body schema over query schema", async () => {
-      processSchema.mockResolvedValue({
+      loadSchema.mockResolvedValue({
         type: "object",
         properties: {
           name: {
@@ -145,7 +145,7 @@ describe("POST /v1/validate/remote", () => {
         },
       });
 
-      expect(processSchema).toHaveBeenCalledWith(
+      expect(loadSchema).toHaveBeenCalledWith(
         "https://example.com/body.schema.json",
       );
     });

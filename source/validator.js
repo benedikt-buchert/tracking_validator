@@ -4,6 +4,7 @@ import Ajv2019 from "ajv/dist/2019.js";
 import AjvDraft4 from "ajv-draft-04";
 import addFormats from "ajv-formats";
 import ajvKeywords from "ajv-keywords";
+import loadSchema from "./loadSchema.js";
 
 function createAjvInstance(schemas, mainSchema) {
   const schemaVersion = mainSchema?.$schema;
@@ -13,15 +14,18 @@ function createAjvInstance(schemas, mainSchema) {
   let ajv;
   if (schemaVersion?.includes("2020-12")) {
     options.strict = false;
+    options.loadSchema = loadSchema;
     ajv = new Ajv2020(options);
   } else if (schemaVersion?.includes("2019-09")) {
     options.strict = false;
+    options.loadSchema = loadSchema;
     ajv = new Ajv2019(options);
   } else if (schemaVersion?.includes("draft-04")) {
     ajv = new AjvDraft4();
     schemas.forEach((s) => ajv.addSchema(s));
   } else {
     options.strict = false;
+    options.loadSchema = loadSchema;
     ajv = new Ajv(options);
   }
 
@@ -41,15 +45,25 @@ function createAjvInstance(schemas, mainSchema) {
  * @param {object} mainSchema The main JSON schema to validate against.
  * @returns {function(object): {valid: boolean, errors: object[]}} A function that takes data and returns a validation result.
  */
-export function createValidator(schemas, mainSchema) {
+export async function createValidator(schemas, mainSchema) {
   if (!mainSchema) {
     mainSchema = schemas;
     schemas = [mainSchema];
   }
   const ajv = createAjvInstance(schemas, mainSchema);
-  const validate = mainSchema["$id"]
-    ? ajv.getSchema(mainSchema["$id"])
-    : ajv.compile(mainSchema);
+
+  let validate;
+  if (mainSchema?.$schema?.includes("draft-04")) {
+    validate = mainSchema["$id"]
+      ? ajv.getSchema(mainSchema["$id"])
+      : ajv.compile(mainSchema);
+  } else if (ajv.compileAsync) {
+    validate = await ajv.compileAsync(mainSchema);
+  } else {
+    validate = mainSchema["$id"]
+      ? ajv.getSchema(mainSchema["$id"])
+      : ajv.compile(mainSchema);
+  }
 
   if (!validate) {
     throw new Error(
