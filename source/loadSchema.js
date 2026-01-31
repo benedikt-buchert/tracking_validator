@@ -29,7 +29,7 @@ export default async function loadSchema(uri) {
       if (schemaPath) {
         potentialPath = path.join(projectRoot, schemaPath);
       }
-    } catch (e) {
+    } catch {
       // Not a valid URL
     }
   } else if (uri.startsWith("schemas")) {
@@ -53,7 +53,7 @@ export default async function loadSchema(uri) {
     try {
       const schemaContent = await fs.readFile(localPath, "utf-8");
       return JSON.parse(schemaContent);
-    } catch (e) {
+    } catch {
       if (!uri.startsWith("http")) {
         throw new Error(`Schema not found at local path: ${uri}`);
       }

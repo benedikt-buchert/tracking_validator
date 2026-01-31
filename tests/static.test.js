@@ -8,6 +8,6 @@ const __dirname = dirname(__filename);
 describe("Static files", () => {
   it("dataLayer.js should exist", async () => {
     const filePath = join(__dirname, "../source/static/dataLayer.js");
-    await access(filePath);
+    await expect(access(filePath)).resolves.not.toThrow();
   });
 });
