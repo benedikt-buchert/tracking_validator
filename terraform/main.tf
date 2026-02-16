@@ -48,7 +48,7 @@ resource "google_artifact_registry_repository" "ghcr_remote" {
   description   = "Remote repository for ghcr.io"
   format        = "DOCKER"
 
-  mode          = "REMOTE_REPOSITORY"
+  mode = "REMOTE_REPOSITORY"
 
   remote_repository_config {
     description = "ghcr.io remote"
@@ -80,9 +80,9 @@ locals {
 
 # The Cloud Run service
 resource "google_cloud_run_v2_service" "service" {
-  name                  = var.service_name
-  location              = var.region
-  deletion_protection   = false
+  name                = var.service_name
+  location            = var.region
+  deletion_protection = false
 
   template {
     service_account = google_service_account.service_account.email
