@@ -14,10 +14,13 @@ export function build_server(opts) {
 if (process.env.NODE_ENV !== "test") {
   dotenv.config();
   const server = build_server();
-  server.listen({ port: 3000 }, function (err) {
-    if (err) {
-      server.log.error(err);
-      process.exit(1);
-    }
-  });
+  server.listen(
+    { port: process.env.PORT || 3000, host: "0.0.0.0" },
+    function (err) {
+      if (err) {
+        server.log.error(err);
+        process.exit(1);
+      }
+    },
+  );
 }
