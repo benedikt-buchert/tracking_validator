@@ -1,4 +1,5 @@
 node_modules
+npm-debug.log
 .git
 .gitignore
 .dockerignore
@@ -6,3 +7,5 @@ Dockerfile
 .env
 tests
 README.md
+.husky
+.vscode

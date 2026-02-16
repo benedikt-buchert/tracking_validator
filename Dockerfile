@@ -9,7 +9,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install --production
+RUN npm install --production --ignore-scripts
 
 # 3. Source Code Layer
 # Copy the rest of the application source code
