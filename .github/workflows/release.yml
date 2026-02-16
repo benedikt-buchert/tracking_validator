@@ -9,9 +9,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      packages: write
-
+      contents: write # To create releases
+      packages: write # To publish packages
+      id-token: write # For provenance
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,14 +30,19 @@ jobs:
           images: ghcr.io/${{ github.repository }}
 
       - name: Build and push Docker image
+        id: build-and-push
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
 
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create ${{ github.ref_name }} --generate-notes
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --generate-notes \
+            --notes "Find the container image for this release here: https://github.com/${{ github.repository }}/pkgs/container/tracking_validator"
