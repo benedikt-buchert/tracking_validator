@@ -8,6 +8,11 @@ A server to validate data structures against a remote JSON schema.
 
 This is the recommended way to run the application.
 
+### Pre-built Image
+
+Pre-built images for this application are published to the GitHub Container Registry. You can find the packages here:
+[https://github.com/benedikt-buchert/tracking_validator/packages](https://github.com/benedikt-buchert/tracking_validator/packages)
+
 **Prerequisites:**
 - Docker is installed and running.
 
@@ -34,6 +39,20 @@ docker run -d -p 3000:3000 -e "SCHEMA_URL_PATTERN=^https?://geojson\\.org/.*\\.j
 ```
 
 The application will be available at `http://localhost:3000`.
+
+### Providing Custom Schemas
+
+If you want to provide your own local schemas instead of relying on remote ones, you can mount a local directory containing your schema files to the `/usr/src/app/schemas` directory inside the container.
+
+```bash
+docker run -d -p 3000:3000 \
+  --env-file ./.env \
+  -v ./my-local-schemas:/usr/src/app/schemas \
+  --name tracking-validator-app \
+  tracking-validator
+```
+
+In this example, the contents of the `my-local-schemas` directory on your host machine will be available inside the container at `/usr/src/app/schemas`.
 
 ## API Endpoints
 
