@@ -22,17 +22,22 @@ This Terraform setup deploys the Tracking Validator application as a public-faci
 
     **Example `terraform.tfvars`:**
     ```hcl
-    project_id   = "your-gcp-project-id"
-    docker_image = "ghcr.io/benedikt-buchert/tracking_validator:v1.0.0"
+    project_id         = "your-gcp-project-id"
+    schema_url_pattern = ".*" # Be more specific in production
 
-    # Optional: Override default environment variables
+    # Optional: Override the default resource prefix
+    # prefix = "my-app"
+
+    # Optional: Override the default docker image
+    # docker_image = "ghcr.io/benedikt-buchert/tracking_validator:v1.0.0"
+
+    # Optional: Set additional environment variables
     # environment_variables = {
     #   "LOG_LEVEL" = "debug"
     # }
 
     # Optional: Create and use a GCS bucket for schemas
     # create_schema_bucket = true
-    # schema_bucket_name   = "your-unique-bucket-name-for-schemas"
     ```
 
 3.  **Initialize Terraform:**

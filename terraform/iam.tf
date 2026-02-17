@@ -1,6 +1,6 @@
 # Allow unauthenticated access to the Cloud Run service
 resource "google_cloud_run_v2_service_iam_member" "public_access" {
-  name     = google_cloud_run_v2_service.service.name
+  name     = local.cloud_run_name
   location = google_cloud_run_v2_service.service.location
   role     = "roles/run.invoker"
   member   = "allUsers"

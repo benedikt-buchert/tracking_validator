@@ -3,6 +3,12 @@ variable "project_id" {
   type        = string
 }
 
+variable "prefix" {
+  description = "The prefix to use for all resource names."
+  type        = string
+  default     = "tracking-validator"
+}
+
 variable "docker_image" {
   description = "The full URL of the Docker image to deploy (e.g., ghcr.io/user/repo:tag)."
   type        = string
@@ -18,12 +24,6 @@ variable "region" {
   description = "The Google Cloud region to deploy the resources in."
   type        = string
   default     = "europe-west3"
-}
-
-variable "service_name" {
-  description = "The name of the Cloud Run service."
-  type        = string
-  default     = "tracking-validator"
 }
 
 variable "min_instances" {
@@ -50,8 +50,9 @@ variable "create_schema_bucket" {
   default     = false
 }
 
-variable "schema_bucket_name" {
-  description = "The name for the Google Cloud Storage bucket for schemas. Must be globally unique."
-  type        = string
-  default     = ""
+
+variable "force_destroy_bucket" {
+  description = "A flag to control whether to force destroy the Google Cloud Storage bucket."
+  type        = bool
+  default     = false
 }

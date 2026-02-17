@@ -21,6 +21,21 @@ provider "google-beta" {
   region  = var.region
 }
 
+locals {
+  # Centralized naming convention
+  service_account_id = "${var.prefix}-sa-server"
+  cloud_run_name     = "${var.prefix}-cr-server"
+  artifact_repo_id   = "${var.prefix}-gar-ghcr-remote"
+  bucket_name        = "${var.prefix}-gcs-schemas"
+
+  # Merged environment variables
+  merged_environment_variables = merge(
+    var.environment_variables,
+    {
+      "SCHEMA_URL_PATTERN" = var.schema_url_pattern
+    }
+  )
+}
 
 # Enable necessary Google Cloud APIs
 resource "google_project_service" "cloudrun_api" {
@@ -44,11 +59,10 @@ resource "google_artifact_registry_repository" "ghcr_remote" {
   provider = google-beta
 
   location      = var.region
-  repository_id = "${var.service_name}-ghcr-remote"
+  repository_id = local.artifact_repo_id
   description   = "Remote repository for ghcr.io"
   format        = "DOCKER"
-
-  mode = "REMOTE_REPOSITORY"
+  mode          = "REMOTE_REPOSITORY"
 
   remote_repository_config {
     description = "ghcr.io remote"
@@ -62,30 +76,31 @@ resource "google_artifact_registry_repository" "ghcr_remote" {
   depends_on = [google_project_service.artifactregistry_api]
 }
 
-
 # Create a dedicated service account for the Cloud Run service
 resource "google_service_account" "service_account" {
-  account_id   = "${var.service_name}-sa"
-  display_name = "Service Account for ${var.service_name}"
-}
-
-locals {
-  merged_environment_variables = merge(
-    var.environment_variables,
-    {
-      "SCHEMA_URL_PATTERN" = var.schema_url_pattern
-    }
-  )
+  account_id   = local.service_account_id
+  display_name = "Service Account for ${local.cloud_run_name}"
 }
 
 # The Cloud Run service
 resource "google_cloud_run_v2_service" "service" {
-  name                = var.service_name
+  name                = local.cloud_run_name
   location            = var.region
   deletion_protection = false
 
   template {
     service_account = google_service_account.service_account.email
+
+    dynamic "volumes" {
+      for_each = var.create_schema_bucket ? [1] : []
+      content {
+        name = "schema-volume"
+        gcs {
+          bucket    = google_storage_bucket.schema_bucket[0].name
+          read_only = true
+        }
+      }
+    }
 
     scaling {
       min_instance_count = var.min_instances
@@ -94,6 +109,15 @@ resource "google_cloud_run_v2_service" "service" {
 
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.ghcr_remote.repository_id}/${replace(var.docker_image, "ghcr.io/", "")}"
+
+      dynamic "volume_mounts" {
+        for_each = var.create_schema_bucket ? [1] : []
+        content {
+          name       = "schema-volume"
+          mount_path = "/usr/src/app/schemas"
+        }
+      }
+
       ports {
         container_port = 3000
       }
@@ -134,9 +158,9 @@ resource "google_cloud_run_v2_service" "service" {
 resource "google_storage_bucket" "schema_bucket" {
   count = var.create_schema_bucket ? 1 : 0
 
-  name          = var.schema_bucket_name
+  name          = local.bucket_name
   location      = var.region
-  force_destroy = false # Set to true to allow destroying a non-empty bucket
+  force_destroy = var.force_destroy_bucket
 
   uniform_bucket_level_access = true
 }
