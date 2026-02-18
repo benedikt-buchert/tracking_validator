@@ -47,3 +47,26 @@ jobs:
         run: |
           docker stop tracking-validator-container
           docker rm tracking-validator-container
+
+  terraform-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: ./terraform
+        run: terraform validate
+
+      - name: Terraform Format Check
+        working-directory: ./terraform
+        run: terraform fmt -check
