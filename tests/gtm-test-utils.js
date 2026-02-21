@@ -57,10 +57,7 @@ function runGtmTests(templatePath) {
     template.tests.scenarios.forEach((scenario) => {
       test(scenario.name, async () => {
         const mocks = {};
-        const apiAsserts = {
-          gtmOnSuccess: jest.fn(),
-          gtmOnFailure: jest.fn(),
-        };
+        const apiAsserts = {};
 
         const sandbox = {
           mock: (name, impl) => {
@@ -73,8 +70,7 @@ function runGtmTests(templatePath) {
             for (const key in obj) {
               const mockFn = jest.fn(obj[key]);
               mockedObject[key] = mockFn;
-              // Store assertion targets for each method
-              apiAsserts[`${name}.${key}`] = mockFn;
+              apiAsserts[name + "." + key] = mockFn;
             }
             mocks[name] = mockedObject;
           },
@@ -82,32 +78,31 @@ function runGtmTests(templatePath) {
             if (mocks[name]) {
               return mocks[name];
             }
-            // Add default mocks for common GTM APIs if not provided
             switch (name) {
               case "Promise":
                 return Promise;
               case "JSON":
                 return JSON;
               case "logToConsole":
-                return () => {}; // Suppress logs in tests
+                return () => {};
+              case "encodeUriComponent":
+                return (str) => encodeURIComponent(str);
               case "templateDataStorage": {
                 const storageMock = {
                   getItemCopy: jest.fn(),
                   setItemCopy: jest.fn(),
                 };
                 mocks[name] = storageMock;
-                apiAsserts[`${name}.getItemCopy`] = storageMock.getItemCopy;
-                apiAsserts[`${name}.setItemCopy`] = storageMock.setItemCopy;
+                apiAsserts[name + ".getItemCopy"] = storageMock.getItemCopy;
+                apiAsserts[name + ".setItemCopy"] = storageMock.setItemCopy;
                 return storageMock;
               }
-              default:
-                // Create a default mock if an API is required but not mocked
-                if (!apiAsserts[name]) {
-                  const mockFn = jest.fn();
-                  mocks[name] = mockFn;
-                  apiAsserts[name] = mockFn;
-                }
-                return mocks[name];
+              default: {
+                const mockFn = jest.fn();
+                mocks[name] = mockFn;
+                apiAsserts[name] = mockFn;
+                return mockFn;
+              }
             }
           },
           assertThat: (value) => ({
@@ -121,6 +116,8 @@ function runGtmTests(templatePath) {
             return {
               wasCalled: () => expect(mockFn).toHaveBeenCalled(),
               wasNotCalled: () => expect(mockFn).not.toHaveBeenCalled(),
+              wasCalledWith: (...args) =>
+                expect(mockFn).toHaveBeenCalledWith(...args),
             };
           },
           runCode: (data) => {
@@ -132,29 +129,32 @@ function runGtmTests(templatePath) {
                   gtmOnSuccess: apiAsserts.gtmOnSuccess,
                   gtmOnFailure: apiAsserts.gtmOnFailure,
                 },
-                ...sandbox, // Expose the mock APIs to the script
+                ...sandbox,
               },
             });
-            // The code to run is a combination of common setup and scenario code
-            const codeToRun = commonSetup + "\n" + template.sandbox;
+            const codeToRun = template.sandbox;
             const wrappedCode = `(function() { ${codeToRun} })();`;
             return vm.run(wrappedCode);
           },
         };
 
-        // Run the test code from the template in a new VM
+        apiAsserts.gtmOnSuccess = jest.fn();
+        apiAsserts.gtmOnFailure = jest.fn();
+        sandbox.gtmOnSuccess = apiAsserts.gtmOnSuccess;
+        sandbox.gtmOnFailure = apiAsserts.gtmOnFailure;
+
         const testVm = new VM({
           timeout: 1000,
-          sandbox,
+          sandbox: sandbox,
         });
 
-        // Replace non-standard GTM Promise.create with the standard constructor
-        const patchedScenarioCode = scenario.code.replace(
+        const testCode = commonSetup + "\n" + scenario.code;
+        const patchedTestCode = testCode.replace(
           /Promise\.create/g,
           "new Promise",
         );
 
-        await testVm.run(patchedScenarioCode);
+        await testVm.run(patchedTestCode);
       });
     });
   });

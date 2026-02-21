@@ -3,7 +3,7 @@ ___INFO___
 
 {
   "type": "MACRO",
-  "displayName": "Schema Validation Cache",
+  "displayName": "Schema Validation via JSON Schema",
   "id": "cvt_temp_public_id",
   "description": "Sends the event data to an external validation server and caches the response for the event lifecycle.",
   "sandboxed": true,
@@ -35,6 +35,14 @@ ___TEMPLATE_PARAMETERS___
     "valueType": "integer",
     "defaultValue": 5000,
     "help": "The maximum time to wait for a response from the validation server, in milliseconds."
+  },
+  {
+    "name": "schemaUrl",
+    "displayName": "Default Schema URL",
+    "type": "TEXT",
+    "valueType": "string",
+    "required": false,
+    "help": "The default URL of the schema to use for validation if the event does not provide one."
   }
 ]
 
@@ -46,6 +54,7 @@ const getAllEventData = require('getAllEventData');
 const templateDataStorage = require('templateDataStorage');
 const log = require('logToConsole');
 const json = require('JSON');
+const encodeUriComponent = require('encodeUriComponent');
 
 const eventData = getAllEventData();
 // Ensure the cache key is unique to the event
@@ -72,7 +81,14 @@ const requestOptions = {
 // 3. Send Request (Using Promises)
 // sendHttpRequest returns a Promise, not a callback
 log(data.validationEndpoint, requestOptions, postBody);
-return sendHttpRequest(data.validationEndpoint, requestOptions, postBody)
+
+let endpoint = data.validationEndpoint;
+if (!eventData['$schema'] && data.schemaUrl) {
+  const separator = endpoint.indexOf('?') !== -1 ? '&' : '?';
+  endpoint += separator + 'schema_url=' + encodeUriComponent(data.schemaUrl);
+}
+
+return sendHttpRequest(endpoint, requestOptions, postBody)
   .then((result) => {
     // Check for success status (200-299)
     if (result.statusCode >= 200 && result.statusCode < 300) {
@@ -230,6 +246,10 @@ scenarios:
   code: |-
     const mockEventData = { event_id: 'test-event-789' };
     mock('getAllEventData', () => mockEventData);
+    mockObject('templateDataStorage', {
+      getItemCopy: () => undefined,
+      setItemCopy: () => {}
+    });
 
     // Note: We don't need to assign mock() to a variable for the assertion
     mock('sendHttpRequest', (url, options) => {
@@ -289,6 +309,34 @@ scenarios:
     // ASSERTIONS
     assertApi('sendHttpRequest').wasNotCalled();
     assertThat(result.validation_status).isEqualTo('success');
+- name: Cache Miss with Default Schema URL
+  description: Simulates a cache miss where the template uses the default schemaUrl parameter.
+  code: |-
+    const mockEventData = { event_id: 'test-event-default-schema' };
+    const mockApiResponse = { validation_status: 'passed' };
+    let capturedUrl;
+
+    mock('getAllEventData', () => mockEventData);
+    mockObject('templateDataStorage', {
+      getItemCopy: () => undefined,
+      setItemCopy: () => {}
+    });
+    mock('sendHttpRequest', (url, options, body) => {
+      capturedUrl = url;
+      return Promise.create((resolve) => {
+        resolve({
+          statusCode: 200,
+          body: JSON.stringify(mockApiResponse)
+        });
+      });
+    });
+
+    runCode({
+      validationEndpoint: 'https://validator.example.com/validate',
+      schemaUrl: 'https://example.com/default-schema.json'
+    }).then((result) => {
+      assertThat(capturedUrl).isEqualTo('https://validator.example.com/validate?schema_url=https%3A%2F%2Fexample.com%2Fdefault-schema.json');
+    });
 setup: |-
   const Promise = require('Promise');
   const JSON = require('JSON');
