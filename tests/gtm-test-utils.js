@@ -1,3 +1,5 @@
+/* eslint-disable jest/valid-title */
+/* eslint-disable jest/no-export */
 import { jest, describe, test, expect } from "@jest/globals";
 import fs from "fs";
 import path from "path";
