@@ -14,26 +14,37 @@ on:
       - "v*"
 
 jobs:
-  changes:
+  check_changes:
     runs-on: ubuntu-latest
     outputs:
-      templates: ${{ steps.filter.outputs.templates }}
+      has_changes: ${{ steps.check_changes.outputs.has_changes }}
     steps:
-      - name: Checkout repository with full history
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Fetch all history
 
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          filters: |
-            templates:
-              - 'gtm_tempaltes/**'
+      - name: Check for template changes
+        id: check_changes
+        run: |
+          echo "Checking for changes in gtm_tempaltes/"
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # This is the first push of the tag, check all files in the commit
+            CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }})
+          else
+            # This is a subsequent push, diff with the previous commit
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "gtm_tempaltes/"; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
 
   release_templates:
-    needs: changes
-    if: needs.changes.outputs.templates == 'true'
+    needs: check_changes
+    if: needs.check_changes.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
