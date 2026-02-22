@@ -1,5 +1,5 @@
 homepage: "https://github.com/benedikt-buchert/tracking_validator"
 documentation: "https://github.com/benedikt-buchert/tracking_validator"
 versions:
-  - sha: <COMMIT_SHA>
-    changeNotes: <RELEASE_NOTES>
+  - sha: "<COMMIT_SHA>"
+    changeNotes: "<RELEASE_NOTES>"
