@@ -67,21 +67,6 @@ jobs:
           cp gtm_tempaltes/${{ matrix.template }}.metadata.yaml ${{ matrix.template }}_release/metadata.yaml
           cp gtm_tempaltes/LICENSE ${{ matrix.template }}_release/LICENSE
 
-      - name: Update metadata.yaml
-        id: update_metadata
-        run: |
-          # Get the commit SHA
-          COMMIT_SHA=$(git rev-parse HEAD)
-          echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
-
-          # Get the release notes, escape them for sed
-          RELEASE_NOTES=$(git tag -l --format='%(contents)' ${{ github.ref_name }})
-          RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed -e 's/[]\/$*.^[]/\\&/g' -e 's/"/\\"/g' | sed -z 's/\n/\\n/g')
-
-          # Replace placeholders in metadata.yaml
-          sed -i "s/<COMMIT_SHA>/${COMMIT_SHA}/" ${{ matrix.template }}_release/metadata.yaml
-          sed -i "s/<RELEASE_NOTES>/${RELEASE_NOTES_ESCAPED}/" ${{ matrix.template }}_release/metadata.yaml
-
       - name: Set up SSH for Deploy Key
         run: |
           mkdir -p ~/.ssh
@@ -89,14 +74,49 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-      - name: Push to separate repository
+      - name: Prepare and Push to repository
+        env:
+          GIT_COMMITTER_NAME: "github-actions[bot]"
+          GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GIT_AUTHOR_NAME: "github-actions[bot]"
+          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           cd ${{ matrix.template }}_release
+
+          # Replace release notes placeholder
+          RELEASE_NOTES=$(git tag -l --format='%(contents)' ${{ github.ref_name }})
+          RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed -e 's/[]\/$*.^[]/\\&/g' -e 's/"/\\"/g' | sed -z 's/\n/\\n/g')
+          sed -i "s/<RELEASE_NOTES>/${RELEASE_NOTES_ESCAPED}/" metadata.yaml
+
+          # Use a placeholder for the SHA
+          sed -i "s/<COMMIT_SHA>/__PLACEHOLDER_SHA__/" metadata.yaml
+
+          # Initialize repo and create the first commit
           git init
           git checkout -b main
           git add .
-          git commit -m "Release ${{ github.ref_name }} from ${{ github.repository }}@${{ env.COMMIT_SHA }}"
+          git commit -m "Release ${{ github.ref_name }}"
+
+          # Get the SHA of this commit
+          COMMIT_SHA=$(git rev-parse HEAD)
+
+          # Replace the placeholder with the actual SHA
+          sed -i "s/__PLACEHOLDER_SHA__/$COMMIT_SHA/" metadata.yaml
+
+          # Amend the commit to include the metadata change. This will change the SHA.
+          git add metadata.yaml
+          git commit --amend --no-edit
+
+          # Get the new, final SHA
+          FINAL_SHA=$(git rev-parse HEAD)
+
+          # Replace the old SHA with the final SHA
+          sed -i "s/$COMMIT_SHA/$FINAL_SHA/" metadata.yaml
+
+          # Amend again. The SHA should not change this time.
+          git add metadata.yaml
+          git commit --amend --no-edit
+
+          # Add the remote and push
           git remote add origin git@github.com:${{ github.repository_owner }}/gtm-template-${{ matrix.template }}.git
           git push -u origin main --force
