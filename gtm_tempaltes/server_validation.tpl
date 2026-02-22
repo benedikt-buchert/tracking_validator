@@ -12,7 +12,7 @@ ___INFO___
   "type": "MACRO",
   "displayName": "Data Validation via JSON Schema",
   "id": "cvt_temp_public_id",
-  "description": "Sends the event data to an external validation server and caches the response for the event lifecycle.",
+  "description": "Sends the event data to an external validation server and caches the response for the event lifecycle. For server setup and documentation, please visit https://github.com/benedikt-buchert/tracking_validator",
   "sandboxed": true,
   "version": 1,
   "build": 1,
@@ -20,7 +20,8 @@ ___INFO___
   "containerContexts": [
     "SERVER"
   ],
-  "securityGroups": []
+  "securityGroups": [],
+  "categories": ["ANALYTICS","UTILITY"]
 }
 
 
@@ -28,12 +29,42 @@ ___TEMPLATE_PARAMETERS___
 
 [
   {
+    "type": "RADIO",
+    "name": "validationSource",
+    "displayName": "Validation Source",
+    "radioItems": [
+      {
+        "value": "all_event_data",
+        "displayValue": "All Event Data"
+      },
+      {
+        "value": "custom_value",
+        "displayValue": "Custom Value"
+      }
+    ],
+    "defaultValue": "all_event_data",
+    "simpleValueType": true
+  },
+  {
+    "type": "TEXT",
+    "name": "customValue",
+    "displayName": "Custom Value to Validate",
+    "simpleValueType": true,
+    "enablingConditions": [
+      {
+        "paramName": "validationSource",
+        "paramValue": "custom_value",
+        "type": "EQUALS"
+      }
+    ]
+  },
+  {
     "name": "validationEndpoint",
     "displayName": "Validation Server Endpoint URL",
     "type": "TEXT",
     "valueType": "string",
     "required": true,
-    "help": "The full URL of the external server to which the event data payload will be sent for validation."
+    "help": "The full URL of the validation server endpoint, without any query parameters. The path should be included. For example: `https://your-server.com/v1/validate/remote`. The template will automatically add necessary query parameters."
   },
   {
     "name": "timeout",
@@ -49,7 +80,7 @@ ___TEMPLATE_PARAMETERS___
     "type": "TEXT",
     "valueType": "string",
     "required": false,
-    "help": "The default URL of the schema to use for validation if the event does not provide one."
+    "help": "Enter a URL for a JSON schema. This schema will be used for validation *only if* the event data sent to this endpoint does not already contain a `$schema` property. If the event data has its own `$schema` property, that schema will be used instead."
   }
 ]
 
@@ -75,7 +106,13 @@ if (cachedResponse) {
 }
 
 // 2. Prepare Request
-const postBody = json.stringify(eventData);
+let dataToValidate;
+if (data.validationSource === 'custom_value') {
+  dataToValidate = data.customValue;
+} else {
+  dataToValidate = eventData;
+}
+const postBody = json.stringify(dataToValidate);
 const requestOptions = {
   method: 'POST',
   headers: {
@@ -345,6 +382,36 @@ scenarios:
     }).then((result) => {
       assertThat(capturedUrl).isEqualTo('https://validator.example.com/validate?schema_url=https%3A%2F%2Fexample.com%2Fdefault-schema.json');
     });
+- name: Custom Value Validation Test
+  description: Tests if the template correctly sends the custom value for validation.
+  code: |-
+    const mockEventData = { event_id: 'test-event-custom-value' };
+    const mockCustomValue = { foo: 'bar', baz: 123 };
+    const mockApiResponse = { validation_status: 'passed' };
+    let capturedBody;
+
+    mock('getAllEventData', () => mockEventData);
+    mockObject('templateDataStorage', {
+      getItemCopy: () => undefined,
+      setItemCopy: () => {}
+    });
+    mock('sendHttpRequest', (url, options, body) => {
+      capturedBody = body;
+      return Promise.create((resolve) => {
+        resolve({
+          statusCode: 200,
+          body: JSON.stringify(mockApiResponse)
+        });
+      });
+    });
+
+    runCode({
+      validationEndpoint: 'https://validator.example.com/validate',
+      validationSource: 'custom_value',
+      customValue: mockCustomValue
+    }).then((result) => {
+      assertThat(capturedBody).isEqualTo(JSON.stringify(mockCustomValue));
+    });
 setup: |-
   const Promise = require('Promise');
   const JSON = require('JSON');
@@ -353,5 +420,3 @@ setup: |-
 ___NOTES___
 
 Created on 18/02/2026, 20:22:01
-
-

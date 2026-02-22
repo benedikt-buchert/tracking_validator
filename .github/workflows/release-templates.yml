@@ -1,0 +1,85 @@
+# This workflow prepares and publishes Google Tag Manager templates to their own repositories
+# for submission to the GTM community gallery.
+#
+# It triggers when a new release is created, but it will only run the release job
+# if files in the 'gtm_tempaltes/' directory have changed.
+#
+# This workflow uses Deploy Keys for authentication. The keys and secrets are set up
+# automatically by the Gemini agent.
+
+name: Release GTM Templates
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      templates: ${{ steps.filter.outputs.templates }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            templates:
+              - 'gtm_tempaltes/**'
+
+  release_templates:
+    needs: changes
+    if: needs.changes.outputs.templates == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [client_validation, server_validation]
+        include:
+          - template: client_validation
+            private_key_secret_name: GTM_CLIENT_RELEASE_PRIVATE_KEY
+          - template: server_validation
+            private_key_secret_name: GTM_SERVER_RELEASE_PRIVATE_KEY
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create release directory
+        run: mkdir ${{ matrix.template }}_release
+
+      - name: Copy template files
+        run: |
+          cp gtm_tempaltes/${{ matrix.template }}.tpl ${{ matrix.template }}_release/template.tpl
+          cp gtm_tempaltes/${{ matrix.template }}.metadata.yaml ${{ matrix.template }}_release/metadata.yaml
+          cp LICENSE ${{ matrix.template }}_release/LICENSE
+
+      - name: Update metadata.yaml
+        id: update_metadata
+        run: |
+          # Get the commit SHA
+          COMMIT_SHA=$(git rev-parse HEAD)
+          echo "COMMIT_SHA=${COMMIT_SHA}" >> $GITHUB_ENV
+
+          # Get the release notes, escape them for sed
+          RELEASE_NOTES=$(echo "${{ github.event.release.body }}" | sed -e 's/[]\/$*.^[]/\\&/g' -e 's/"/\\"/g' | sed -z 's/\n/\\n/g')
+
+          # Replace placeholders in metadata.yaml
+          sed -i "s/<COMMIT_SHA>/${COMMIT_SHA}/" ${{ matrix.template }}_release/metadata.yaml
+          sed -i "s/<RELEASE_NOTES>/${RELEASE_NOTES}/" ${{ matrix.template }}_release/metadata.yaml
+
+      - name: Set up SSH for Deploy Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets[matrix.private_key_secret_name] }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Push to separate repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          cd ${{ matrix.template }}_release
+          git init
+          git add .
+          git commit -m "Release from ${{ github.repository }}@${{ env.COMMIT_SHA }}"
+          git remote add origin git@github.com:${{ github.repository_owner }}/gtm-template-${{ matrix.template }}.git
+          git push -u origin main --force
