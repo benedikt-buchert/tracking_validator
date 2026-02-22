@@ -65,7 +65,7 @@ jobs:
         run: |
           cp gtm_tempaltes/${{ matrix.template }}.tpl ${{ matrix.template }}_release/template.tpl
           cp gtm_tempaltes/${{ matrix.template }}.metadata.yaml ${{ matrix.template }}_release/metadata.yaml
-          cp LICENSE ${{ matrix.template }}_release/LICENSE
+          cp gtm_tempaltes/LICENSE ${{ matrix.template }}_release/LICENSE
 
       - name: Update metadata.yaml
         id: update_metadata
