@@ -19,7 +19,11 @@ jobs:
     outputs:
       templates: ${{ steps.filter.outputs.templates }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository with full history
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - uses: dorny/paths-filter@v2
         id: filter
         with:
