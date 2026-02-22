@@ -87,6 +87,7 @@ ___TEMPLATE_PARAMETERS___
 
 ___SANDBOXED_JS_FOR_SERVER___
 
+// Test change for release workflow
 const sendHttpRequest = require('sendHttpRequest');
 const getAllEventData = require('getAllEventData');
 const templateDataStorage = require('templateDataStorage');
