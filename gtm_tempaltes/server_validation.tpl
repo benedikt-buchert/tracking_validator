@@ -87,7 +87,6 @@ ___TEMPLATE_PARAMETERS___
 
 ___SANDBOXED_JS_FOR_SERVER___
 
-// Trigger release
 const sendHttpRequest = require('sendHttpRequest');
 const getAllEventData = require('getAllEventData');
 const templateDataStorage = require('templateDataStorage');

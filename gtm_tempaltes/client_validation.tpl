@@ -48,7 +48,6 @@ ___TEMPLATE_PARAMETERS___
 
 ___SANDBOXED_JS_FOR_WEB_TEMPLATE___
 
-// Trigger release
 const injectScript = require('injectScript');
 const encodeUri = require('encodeUri');
 
