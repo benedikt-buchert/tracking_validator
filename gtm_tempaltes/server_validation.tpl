@@ -1,9 +1,16 @@
+﻿___TERMS_OF_SERVICE___
+
+By creating or modifying this file you agree to Google Tag Manager's Community
+Template Gallery Developer Terms of Service available at
+https://developers.google.com/tag-manager/gallery-tos (or such other URL as
+Google may provide), as modified from time to time.
+
 
 ___INFO___
 
 {
   "type": "MACRO",
-  "displayName": "Schema Validation via JSON Schema",
+  "displayName": "Data Validation via JSON Schema",
   "id": "cvt_temp_public_id",
   "description": "Sends the event data to an external validation server and caches the response for the event lifecycle.",
   "sandboxed": true,
@@ -310,7 +317,8 @@ scenarios:
     assertApi('sendHttpRequest').wasNotCalled();
     assertThat(result.validation_status).isEqualTo('success');
 - name: Cache Miss with Default Schema URL
-  description: Simulates a cache miss where the template uses the default schemaUrl parameter.
+  description: Simulates a cache miss where the template uses the default schemaUrl
+    parameter.
   code: |-
     const mockEventData = { event_id: 'test-event-default-schema' };
     const mockApiResponse = { validation_status: 'passed' };
@@ -345,3 +353,5 @@ setup: |-
 ___NOTES___
 
 Created on 18/02/2026, 20:22:01
+
+
