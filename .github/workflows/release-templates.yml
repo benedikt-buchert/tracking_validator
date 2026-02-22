@@ -95,6 +95,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           cd ${{ matrix.template }}_release
           git init
+          git checkout -b main
           git add .
           git commit -m "Release ${{ github.ref_name }} from ${{ github.repository }}@${{ env.COMMIT_SHA }}"
           git remote add origin git@github.com:${{ github.repository_owner }}/gtm-template-${{ matrix.template }}.git
