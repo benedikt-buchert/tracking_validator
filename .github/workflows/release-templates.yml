@@ -83,39 +83,26 @@ jobs:
         run: |
           cd ${{ matrix.template }}_release
 
-          # Replace release notes placeholder
+          # Update release notes placeholder
           RELEASE_NOTES=$(git tag -l --format='%(contents)' ${{ github.ref_name }})
           RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed -e 's/[]\/$*.^[]/\\&/g' -e 's/"/\\"/g' | sed -z 's/\n/\\n/g')
           sed -i "s/<RELEASE_NOTES>/${RELEASE_NOTES_ESCAPED}/" metadata.yaml
 
-          # Use a placeholder for the SHA
-          sed -i "s/<COMMIT_SHA>/__PLACEHOLDER_SHA__/" metadata.yaml
-
-          # Initialize repo and create the first commit
+          # Initialize repo and create the first commit with template files
           git init
           git checkout -b main
-          git add .
-          git commit -m "Release ${{ github.ref_name }}"
+          find . -type f ! -name "metadata.yaml" -print0 | xargs -0 git add
+          git commit -m "Add template files for release ${{ github.ref_name }}"
 
           # Get the SHA of this commit
           COMMIT_SHA=$(git rev-parse HEAD)
 
-          # Replace the placeholder with the actual SHA
-          sed -i "s/__PLACEHOLDER_SHA__/$COMMIT_SHA/" metadata.yaml
+          # Update metadata.yaml with the correct SHA
+          sed -i "s/<COMMIT_SHA>/$COMMIT_SHA/" metadata.yaml
 
-          # Amend the commit to include the metadata change. This will change the SHA.
+          # Create a second commit with the updated metadata
           git add metadata.yaml
-          git commit --amend --no-edit
-
-          # Get the new, final SHA
-          FINAL_SHA=$(git rev-parse HEAD)
-
-          # Replace the old SHA with the final SHA
-          sed -i "s/$COMMIT_SHA/$FINAL_SHA/" metadata.yaml
-
-          # Amend again. The SHA should not change this time.
-          git add metadata.yaml
-          git commit --amend --no-edit
+          git commit -m "Update metadata.yaml with release information"
 
           # Add the remote and push
           git remote add origin git@github.com:${{ github.repository_owner }}/gtm-template-${{ matrix.template }}.git
