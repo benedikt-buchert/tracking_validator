@@ -1,0 +1,5 @@
+homepage: "https://github.com/benedikt-buchert/tracking_validator"
+documentation: "https://github.com/benedikt-buchert/tracking_validator"
+versions:
+  - sha: c0c8d1cc7fdd73bf0eca540f595c4a30356b7f90
+    changeNotes: Initial release.

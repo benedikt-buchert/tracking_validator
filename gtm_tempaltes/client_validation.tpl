@@ -18,7 +18,7 @@ ___INFO___
     "id": "brand_dummy",
     "displayName": ""
   },
-  "description": "Injects the dataLayer validator script",
+  "description": "Injects the dataLayer validator script. For server setup and documentation, please visit https://github.com/benedikt-buchert/tracking_validator",
   "containerContexts": [
     "WEB"
   ]
@@ -113,5 +113,3 @@ scenarios:
 ___NOTES___
 
 Created on 26/01/2026, 20:58:57
-
-
