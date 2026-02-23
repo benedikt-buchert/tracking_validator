@@ -1,0 +1,109 @@
+# This workflow prepares and publishes Google Tag Manager templates to their own repositories
+# for submission to the GTM community gallery.
+#
+# It triggers on a push of a tag that starts with 'v*'.
+# It will only run the release job if files in the 'gtm_tempaltes/' directory have changed.
+#
+# This workflow uses Deploy Keys for authentication.
+
+name: Release GTM Templates
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  check_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      has_changes: ${{ steps.check_changes.outputs.has_changes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Fetch all history
+
+      - name: Check for template changes
+        id: check_changes
+        run: |
+          echo "Checking for changes in gtm_tempaltes/"
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # This is the first push of the tag, check all files in the commit
+            CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }})
+          else
+            # This is a subsequent push, diff with the previous commit
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "gtm_tempaltes/"; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  release_templates:
+    needs: check_changes
+    if: needs.check_changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [client_validation, server_validation]
+        include:
+          - template: client_validation
+            private_key_secret_name: GTM_CLIENT_RELEASE_PRIVATE_KEY
+          - template: server_validation
+            private_key_secret_name: GTM_SERVER_RELEASE_PRIVATE_KEY
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Create release directory
+        run: mkdir ${{ matrix.template }}_release
+
+      - name: Copy template files
+        run: |
+          cp gtm_tempaltes/${{ matrix.template }}.tpl ${{ matrix.template }}_release/template.tpl
+          cp gtm_tempaltes/${{ matrix.template }}.metadata.yaml ${{ matrix.template }}_release/metadata.yaml
+          cp gtm_tempaltes/LICENSE ${{ matrix.template }}_release/LICENSE
+
+      - name: Set up SSH for Deploy Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets[matrix.private_key_secret_name] }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+      - name: Prepare and Push to repository
+        env:
+          GIT_COMMITTER_NAME: "github-actions[bot]"
+          GIT_COMMITTER_EMAIL: "github-actions[bot]@users.noreply.github.com"
+          GIT_AUTHOR_NAME: "github-actions[bot]"
+          GIT_AUTHOR_EMAIL: "github-actions[bot]@users.noreply.github.com"
+        run: |
+          cd ${{ matrix.template }}_release
+
+          # Update release notes placeholder
+          RELEASE_NOTES=$(git tag -l --format='%(contents)' ${{ github.ref_name }})
+          RELEASE_NOTES_ESCAPED=$(echo "$RELEASE_NOTES" | sed -e 's/[]\/$*.^[]/\\&/g' -e 's/"/\\"/g' | sed -z 's/\n/\\n/g')
+          sed -i "s/<RELEASE_NOTES>/${RELEASE_NOTES_ESCAPED}/" metadata.yaml
+
+          # Initialize repo and create the first commit with template files
+          git init
+          git checkout -b main
+          find . -type f ! -name "metadata.yaml" -print0 | xargs -0 git add
+          git commit -m "Add template files for release ${{ github.ref_name }}"
+
+          # Get the SHA of this commit
+          COMMIT_SHA=$(git rev-parse HEAD)
+
+          # Update metadata.yaml with the correct SHA
+          sed -i "s/<COMMIT_SHA>/$COMMIT_SHA/" metadata.yaml
+
+          # Create a second commit with the updated metadata
+          git add metadata.yaml
+          git commit -m "Update metadata.yaml with release information"
+
+          # Add the remote and push
+          git remote add origin git@github.com:${{ github.repository_owner }}/gtm-template-${{ matrix.template }}.git
+          git push -u origin main --force
