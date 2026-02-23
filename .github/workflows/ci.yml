@@ -1,7 +1,16 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or SHA to run CI on"
+        required: false
+        default: ""
   pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
   test-and-lint:
@@ -9,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -17,6 +28,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev
 
       - name: Run linter
         run: npm run lint
@@ -30,6 +44,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Build Docker image
         run: docker build -t tracking-validator .
@@ -53,9 +69,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: "1.5.0"
 
