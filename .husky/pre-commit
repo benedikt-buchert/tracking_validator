@@ -1,7 +1,6 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+set -e
 
 # Format Terraform files
 terraform -chdir=terraform fmt -recursive
-
-npm run lint -- --max-warnings 0 && npm test
+npm run lint -- --max-warnings 0
+npm test
