@@ -70,7 +70,7 @@ describe("POST /v1/validate/remote", () => {
 
       expect(response.statusCode).toBe(400);
       expect(JSON.parse(response.payload)).toEqual({
-        error: "Failed to fetch",
+        error: "Failed to process schema",
       });
     });
   });
