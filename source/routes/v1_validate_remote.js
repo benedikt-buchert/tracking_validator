@@ -58,14 +58,8 @@ const plugin = async (fastify, opts) => {
     "/v1/validate/remote",
     { schema },
     async function (request, reply) {
-      const { schema_url: query_schema_url } = request.query || {};
-
-      const { $schema: body_schema_url, ...dataToValidate } =
-        request.body || {};
-
-      const schema_url = body_schema_url || query_schema_url;
-
-      const validationData = body_schema_url ? dataToValidate : request.body;
+      const schema_url = request.body?.$schema || request.query?.schema_url;
+      const validationData = request.body;
 
       if (!schema_url || !schemaUrlPattern.test(schema_url)) {
         return reply

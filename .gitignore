@@ -9,6 +9,7 @@ schemas
 *.tfstate
 *.tfstate.backup
 *.tfvars
+*.auto.tfvars.json
 override.tf
 override.tf.json
 *_override.tf
