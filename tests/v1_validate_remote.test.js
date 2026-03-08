@@ -4,8 +4,10 @@ import { jest } from "@jest/globals";
 describe("POST /v1/validate/remote", () => {
   let server;
   const loadSchema = jest.fn();
+  const originalSchemaPattern = process.env.SCHEMA_URL_PATTERN;
 
   beforeEach(async () => {
+    process.env.SCHEMA_URL_PATTERN = "^https://example\\.com/.*\\.json$";
     server = build_server({ loadSchema });
     await server.ready();
   });
@@ -13,6 +15,7 @@ describe("POST /v1/validate/remote", () => {
   afterEach(async () => {
     await server.close();
     jest.clearAllMocks();
+    process.env.SCHEMA_URL_PATTERN = originalSchemaPattern;
   });
 
   describe("with schema_url in query", () => {
@@ -70,8 +73,44 @@ describe("POST /v1/validate/remote", () => {
 
       expect(response.statusCode).toBe(400);
       expect(JSON.parse(response.payload)).toEqual({
-        error: "Failed to fetch",
+        error: "Invalid schema or validation request",
       });
+    });
+
+    it("rejects schema urls that do not match the allowlist pattern", async () => {
+      const response = await server.inject({
+        method: "POST",
+        url: "/v1/validate/remote?schema_url=https://attacker.example/schema.json",
+        payload: { name: "test" },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(loadSchema).not.toHaveBeenCalled();
+    });
+
+    it("reuses compiled validators for repeated schema urls", async () => {
+      loadSchema.mockResolvedValue({
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+          },
+        },
+        required: ["name"],
+      });
+
+      const request = {
+        method: "POST",
+        url: "/v1/validate/remote?schema_url=https://example.com/schema.json",
+        payload: { name: "test" },
+      };
+
+      const first = await server.inject(request);
+      const second = await server.inject(request);
+
+      expect(first.statusCode).toBe(200);
+      expect(second.statusCode).toBe(200);
+      expect(loadSchema).toHaveBeenCalledTimes(1);
     });
   });
 
