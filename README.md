@@ -40,6 +40,15 @@ docker run -d -p 3000:3000 -e "SCHEMA_URL_PATTERN=^https?://geojson\\.org/.*\\.j
 
 The application will be available at `http://localhost:3000`.
 
+### Environment Variables
+
+- `SCHEMA_URL_PATTERN`: Regex allowlist for remote schema URLs. Requests that do not match are rejected.
+- `SCHEMA_FETCH_TIMEOUT_MS`: Timeout for loading remote schemas (default `5000`).
+- `SCHEMA_MAX_BYTES`: Maximum schema size in bytes for local and remote schemas (default `262144`).
+- `CORS_ORIGIN_REGEX`: Regex allowlist for CORS origins.
+- `RATE_LIMIT_MAX`: Maximum requests in the rate-limit window (default `100`).
+- `RATE_LIMIT_WINDOW`: Rate-limit window (default `1 minute`).
+
 ### Providing Custom Schemas
 
 If you want to provide your own local schemas instead of relying on remote ones, you can mount a local directory containing your schema files to the `/usr/src/app/schemas` directory inside the container.
@@ -118,10 +127,10 @@ In this example, the contents of the `my-local-schemas` directory on your host m
     ```
 
   **Error Response (400 Bad Request):**
-  - If the schema is not reachable or invalid:
+  - If the schema URL is disallowed, unreachable, invalid, or otherwise cannot be processed:
     ```json
     {
-      "error": "Failed to fetch schema from <schema_url>. Status: 404"
+      "error": "Invalid schema or validation request"
     }
     ```
 
