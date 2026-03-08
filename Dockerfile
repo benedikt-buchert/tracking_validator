@@ -16,8 +16,8 @@ RUN npm install --production --ignore-scripts
 COPY . .
 
 # 4. Expose Port and Run
-# Expose the port the app runs on
+USER node
+
 EXPOSE 3000
 
-# Run the application
 CMD [ "node", "server.js" ]
