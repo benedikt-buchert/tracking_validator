@@ -1,48 +1,76 @@
 # Tracking Validator
 
-A server to validate data structures against a remote JSON schema.
+A Fastify service that validates JSON payloads against JSON Schemas loaded from a URL (or a local `schemas/` path).
 
-## Running the application
+## Quick Start (Local)
 
-### Using Docker
+### Prerequisites
 
-This is the recommended way to run the application.
+- Node.js 20+
+- npm
 
-### Pre-built Image
+### 1. Install dependencies
 
-Pre-built images for this application are published to the GitHub Container Registry. You can find the packages here:
-[https://github.com/benedikt-buchert/tracking_validator/packages](https://github.com/benedikt-buchert/tracking_validator/packages)
+```bash
+npm install
+```
 
-**Prerequisites:**
-- Docker is installed and running.
+### 2. Configure environment
 
-**1. Build the Docker image:**
+```bash
+cp .env.example .env
+```
+
+The default `.env.example` only allows schema URLs from `tracking-docs-demo.buchert.digital`.
+If you want to test local schemas in this repository (`schemas/...`), relax the pattern for local development:
+
+```dotenv
+SCHEMA_URL_PATTERN='.*'
+```
+
+Use this only for local development. In shared or production environments, keep a strict allowlist regex.
+
+### 3. Start the server
+
+```bash
+npm start
+```
+
+Server listens on `http://localhost:3000` by default.
+
+### 4. Verify it is running
+
+```bash
+curl http://localhost:3000/health
+```
+
+Expected response:
+
+```json
+{ "status": "ok" }
+```
+
+## Quick Start (Docker)
+
+### 1. Build image
+
 ```bash
 docker build -t tracking-validator .
 ```
 
-**2. Run the Docker container:**
-There are two ways to run the container, depending on how you want to provide the `SCHEMA_URL_PATTERN` environment variable.
-
-**Option A: Using the `--env-file` flag (recommended)**
-This method uses the `.env` file to pass environment variables.
+### 2. Run container
 
 ```bash
 docker run -d -p 3000:3000 --env-file ./.env --name tracking-validator-app tracking-validator
 ```
 
-**Option B: Using the `-e` flag**
-This method passes the environment variable directly.
+### 3. Verify
 
 ```bash
-docker run -d -p 3000:3000 -e "SCHEMA_URL_PATTERN=^https?://geojson\\.org/.*\\.json$" --name tracking-validator-app tracking-validator
+curl http://localhost:3000/health
 ```
 
-The application will be available at `http://localhost:3000`.
-
-### Providing Custom Schemas
-
-If you want to provide your own local schemas instead of relying on remote ones, you can mount a local directory containing your schema files to the `/usr/src/app/schemas` directory inside the container.
+### Optional: mount custom local schemas
 
 ```bash
 docker run -d -p 3000:3000 \
@@ -52,116 +80,128 @@ docker run -d -p 3000:3000 \
   tracking-validator
 ```
 
-In this example, the contents of the `my-local-schemas` directory on your host machine will be available inside the container at `/usr/src/app/schemas`.
+## Configuration
 
-## API Endpoints
+Environment variables:
 
-### Health Check
+- `PORT`: server port (default: `3000`)
+- `SCHEMA_URL_PATTERN`: regex used to validate `schema_url` and body `$schema`
+- `CORS_ORIGIN_REGEX`: regex for allowed CORS origins
 
-- **GET** `/health`
+Default example values:
 
-  Returns the health status of the server.
-
-  **Success Response (200 OK):**
-  ```json
-  {
-    "status": "ok"
-  }
-  ```
-
-### Remote Schema Validation
-
-- **POST** `/v1/validate/remote`
-
-  Validates a JSON payload in the request body against a remote schema. The schema can be provided in two ways:
-
-  1.  **`schema_url` query parameter:** The URL of the JSON schema to validate against.
-  2.  **`$schema` key in the request body:** The URL of the JSON schema to validate against.
-
-  If both are provided, the `$schema` key in the body takes precedence. The schema URL must match the `SCHEMA_URL_PATTERN` environment variable.
-
-  **Example Request with `schema_url` query parameter:**
-  ```bash
-  curl -X POST 'http://localhost:3000/v1/validate/remote?schema_url=https://geojson.org/schema/GeoJSON.json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "type": "Point",
-    "coordinates": [102.0, 0.5]
-  }'
-  ```
-
-  **Example Request with `$schema` in body:**
-  ```bash
-  curl -X POST 'http://localhost:3000/v1/validate/remote' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "$schema": "https://geojson.org/schema/GeoJSON.json",
-    "type": "Point",
-    "coordinates": [102.0, 0.5]
-  }'
-  ```
-
-  **Success Response (200 OK):**
-  - For a valid payload:
-    ```json
-    {
-      "valid": true,
-      "errors": []
-    }
-    ```
-  - For an invalid payload:
-    ```json
-    {
-      "valid":false,
-      "errors": [ ... ]
-    }
-    ```
-
-  **Error Response (400 Bad Request):**
-  - If the schema is not reachable or invalid:
-    ```json
-    {
-      "error": "Failed to fetch schema from <schema_url>. Status: 404"
-    }
-    ```
-
-## Browser Injection
-
-The `inject.js` script can be used to inject the `dataLayer.js` script into a website. This is useful for testing the validator with a live website.
-
-```javascript
-// This script can be pasted into a browser's developer console to inject the dataLayer.js script into a website.
-// The script assumes that the tracking_validation service is running on http://localhost:3000.
-// If the service is running on a different URL, you need to update the script.src accordingly.
-
-(function() {
-    console.log('Injecting dataLayer.js script...');
-    var script = document.createElement('script');
-    script.src = 'http://localhost:3000/static/dataLayer.js?schema_url=https://tracking-docs-demo.buchert.digital/schemas/1.2.0/event-reference.json';
-    script.onload = function() {
-        console.log('dataLayer.js script injected successfully.');
-    };
-    script.onerror = function() {
-        console.error('Failed to inject dataLayer.js script.');
-    };
-    document.body.appendChild(script);
-})();
+```dotenv
+CORS_ORIGIN_REGEX='.*'
+SCHEMA_URL_PATTERN='^https?:\/\/tracking-docs-demo\.buchert\.digital.*\.json$'
 ```
 
-## Google Tag Manager Template
+## API
 
-A Google Tag Manager (GTM) template is available to easily integrate the tracking validator with your GTM setup. You can find the template in this repository: `DataLayerValidator.tpl`.
+### `GET /health`
 
-To use the template, you need to import it into your GTM container:
+Returns service status.
 
-1.  In your GTM container, go to **Templates**.
-2.  Click **New** under **Tag Templates**.
-3.  Click the three dots in the top right corner and select **Import**.
-4.  Select the `DataLayerValidator.tpl` file from this repository.
-5.  Save the template.
+Response:
 
-### Permissions
+```json
+{ "status": "ok" }
+```
 
-When using the GTM template, you need to grant the following permissions:
+### `POST /v1/validate/remote`
 
-*   **Injects Scripts:** To inject the `dataLayer.js` script. Update the domain to match the server domain where the tracking validator service is running.
+Validate a JSON payload against a schema provided in one of two ways:
+
+1. Query param: `schema_url`
+2. Body field: `$schema` (takes precedence over query param)
+
+If validation succeeds:
+
+```json
+{
+  "valid": true,
+  "errors": []
+}
+```
+
+If validation fails:
+
+```json
+{
+  "valid": false,
+  "errors": [
+    { "instancePath": "...", "message": "..." }
+  ]
+}
+```
+
+If schema loading/processing fails:
+
+```json
+{
+  "error": "..."
+}
+```
+
+### Example request (schema in query)
+
+```bash
+curl -X POST 'http://localhost:3000/v1/validate/remote?schema_url=https://tracking-docs-demo.buchert.digital/schemas/1.2.0/event-reference.json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "event": "purchase",
+    "ecommerce": {
+      "currency": "EUR"
+    }
+  }'
+```
+
+### Example request (schema in body)
+
+```bash
+curl -X POST 'http://localhost:3000/v1/validate/remote' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "$schema": "https://tracking-docs-demo.buchert.digital/schemas/1.2.0/event-reference.json",
+    "event": "purchase",
+    "ecommerce": {
+      "currency": "EUR"
+    }
+  }'
+```
+
+## Troubleshooting
+
+If you get a `400` response with an error related to schema loading:
+
+- Check that your schema URL/path matches `SCHEMA_URL_PATTERN`.
+- If using local schemas, ensure the value starts with `schemas/` (for example `schemas/1.2.0/event-reference.json`).
+- Confirm the referenced schema file exists and contains valid JSON.
+
+## Development Commands
+
+```bash
+npm test
+npm run lint
+```
+
+## Browser Injection Script
+
+`inject.js` can be pasted into a browser console to inject `dataLayer.js` from this service:
+
+- Script file: `source/static/dataLayer.js`
+- Example helper: `inject.js`
+
+## Google Tag Manager Templates
+
+GTM templates are in `gtm_tempaltes/`:
+
+- `gtm_tempaltes/client_validation.tpl`
+- `gtm_tempaltes/server_validation.tpl`
+
+To import into GTM:
+
+1. Go to **Templates** in your GTM container.
+2. Click **New** under **Tag Templates**.
+3. Use the three-dot menu and click **Import**.
+4. Select one of the `.tpl` files above.
+5. Save.
