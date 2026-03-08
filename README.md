@@ -113,8 +113,6 @@ docker run -d -p 3000:3000 \
 
 ### Terraform (Google Cloud Run)
 
-Yes, the Terraform deployment process is documented.
-
 - Full guide: [`terraform/README.md`](terraform/README.md)
 - Includes prerequisites, `terraform.tfvars`, `terraform init/plan/apply`, and cleanup (`terraform destroy`).
 
