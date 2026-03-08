@@ -10,8 +10,13 @@ const { default: loadSchema } = await import("../source/loadSchema.js");
 global.fetch = jest.fn();
 
 describe("loadSchema", () => {
+  const originalFetchTimeoutMs = process.env.SCHEMA_FETCH_TIMEOUT_MS;
+  const originalSchemaMaxBytes = process.env.SCHEMA_MAX_BYTES;
+
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
+    process.env.SCHEMA_FETCH_TIMEOUT_MS = originalFetchTimeoutMs;
+    process.env.SCHEMA_MAX_BYTES = originalSchemaMaxBytes;
   });
 
   it("loads a schema from a local path", async () => {
@@ -44,7 +49,12 @@ describe("loadSchema", () => {
     });
 
     const schema = await loadSchema("http://example.com/schema.json");
-    expect(fetch).toHaveBeenCalledWith("http://example.com/schema.json");
+    expect(fetch).toHaveBeenCalledWith(
+      "http://example.com/schema.json",
+      expect.objectContaining({
+        signal: expect.anything(),
+      }),
+    );
     expect(schema).toEqual(schemaContent);
   });
 
@@ -78,6 +88,9 @@ describe("loadSchema", () => {
     expect(readFile).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledWith(
       "http://example.com/schemas/../../.gitignore",
+      expect.objectContaining({
+        signal: expect.anything(),
+      }),
     );
   });
 
@@ -120,5 +133,40 @@ describe("loadSchema", () => {
   it("throws an error when local file is not valid JSON", async () => {
     readFile.mockResolvedValue("not a json");
     await expect(loadSchema("schemas/1.1.1/invalid.json")).rejects.toThrow();
+  });
+
+  it("rejects localhost schema urls", async () => {
+    await expect(
+      loadSchema("http://localhost:3000/schema.json"),
+    ).rejects.toThrow("Disallowed schema host: localhost");
+  });
+
+  it("times out when remote schema loading takes too long", async () => {
+    process.env.SCHEMA_FETCH_TIMEOUT_MS = "5";
+
+    fetch.mockImplementation((_url, { signal }) => {
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new Error("Aborted")), {
+          once: true,
+        });
+      });
+    });
+
+    await expect(loadSchema("https://example.com/slow.json")).rejects.toThrow(
+      "Failed to fetch schema",
+    );
+  });
+
+  it("rejects remote schemas larger than SCHEMA_MAX_BYTES", async () => {
+    process.env.SCHEMA_MAX_BYTES = "20";
+
+    fetch.mockResolvedValue({
+      ok: true,
+      text: jest.fn().mockResolvedValue('{"very":"long schema payload"}'),
+    });
+
+    await expect(loadSchema("https://example.com/large.json")).rejects.toThrow(
+      "Schema exceeds maximum allowed size",
+    );
   });
 });
