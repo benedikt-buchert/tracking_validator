@@ -107,6 +107,8 @@ resource "google_cloud_run_v2_service" "service" {
       max_instance_count = var.max_instances
     }
 
+    max_instance_request_concurrency = var.max_instance_request_concurrency
+
     containers {
       image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.ghcr_remote.repository_id}/${replace(var.docker_image, "ghcr.io/", "")}"
 

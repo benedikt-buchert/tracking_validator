@@ -38,6 +38,12 @@ variable "max_instances" {
   default     = 10
 }
 
+variable "max_instance_request_concurrency" {
+  description = "Maximum number of concurrent requests per container instance. Lower values reduce latency tail; higher values improve cost efficiency. Cloud Run default is 80."
+  type        = number
+  default     = 80
+}
+
 variable "environment_variables" {
   description = "A map of optional, additional environment variables to set on the Cloud Run service."
   type        = map(string)
