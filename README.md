@@ -134,6 +134,32 @@ In this example, the contents of the `my-local-schemas` directory on your host m
     }
     ```
 
+## Production Sizing
+
+### Concurrency and autoscaling
+
+The service caches compiled AJV validators per schema URL in memory. After the first request for a given schema, subsequent requests are CPU-light and complete in under 5ms. Cold cache hits (first request per schema after a cold start) involve a remote schema fetch plus AJV compilation and take 100–300ms depending on schema complexity and remote host latency.
+
+Based on local load testing with warm cache:
+
+| `max_instance_request_concurrency` | Avg latency | p99 latency | Throughput |
+|---|---|---|---|
+| 10 | 1.4ms | 5ms | ~5,800 req/s |
+| 50 | 7.8ms | 17ms | ~6,000 req/s |
+| 100 | 16ms | 33ms | ~5,900 req/s |
+
+Throughput peaks around concurrency 50 with acceptable p99 latency. The Terraform variable `max_instance_request_concurrency` defaults to `80` — lower it if your schema set is large or schemas are fetched from slow remote hosts.
+
+Cloud Run autoscaling was verified to scale out correctly when concurrent requests exceed the per-instance concurrency limit.
+
+### Rate limiting
+
+The default `RATE_LIMIT_MAX=100` per minute applies per IP per instance. This is appropriate for first-party GTM/browser traffic. If you run behind a proxy or load balancer that forwards a single IP, raise this value or disable it via `RATE_LIMIT_MAX=0` and enforce limits upstream.
+
+### Test limitations
+
+The local benchmarks used disk-backed schemas (no network I/O for schema loading). In production, cold cache hits will be slower proportional to your remote schema host latency. Benchmark against your actual schema host before finalising `max_instance_request_concurrency`.
+
 ## Browser Injection
 
 The `inject.js` script can be used to inject the `dataLayer.js` script into a website. This is useful for testing the validator with a live website.
