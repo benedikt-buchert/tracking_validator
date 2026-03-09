@@ -3,6 +3,7 @@ import defaultLoadSchema from "../loadSchema.js";
 
 const plugin = async (fastify, opts) => {
   const { loadSchema = defaultLoadSchema } = opts;
+  const validatorCache = new Map();
   const schema = {
     oneOf: [
       {
@@ -47,8 +48,12 @@ const plugin = async (fastify, opts) => {
       const validationData = request.body;
 
       try {
-        const mainSchema = await loadSchema(schema_url);
-        const validator = await createValidator(mainSchema);
+        let validator = validatorCache.get(schema_url);
+        if (!validator) {
+          const mainSchema = await loadSchema(schema_url);
+          validator = await createValidator(mainSchema);
+          validatorCache.set(schema_url, validator);
+        }
         const result = validator(validationData);
         reply.send(result);
       } catch (error) {
