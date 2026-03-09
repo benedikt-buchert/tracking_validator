@@ -125,6 +125,49 @@ describe("POST /v1/validate/remote", () => {
       expect(JSON.parse(response.payload).errors).not.toEqual([]);
     });
 
+    it("caches the validator — loadSchema called only once for repeated requests", async () => {
+      loadSchema.mockResolvedValue({
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
+      });
+
+      await server.inject({
+        method: "POST",
+        url: "/v1/validate/remote?schema_url=https://example.com/schema.json",
+        payload: { name: "first" },
+      });
+      await server.inject({
+        method: "POST",
+        url: "/v1/validate/remote?schema_url=https://example.com/schema.json",
+        payload: { name: "second" },
+      });
+
+      expect(loadSchema).toHaveBeenCalledTimes(1);
+    });
+
+    it("caches validators independently per schema URL", async () => {
+      loadSchema.mockResolvedValue({
+        type: "object",
+        properties: { name: { type: "string" } },
+      });
+
+      await server.inject({
+        method: "POST",
+        url: "/v1/validate/remote?schema_url=https://example.com/a.json",
+        payload: { name: "test" },
+      });
+      await server.inject({
+        method: "POST",
+        url: "/v1/validate/remote?schema_url=https://example.com/b.json",
+        payload: { name: "test" },
+      });
+
+      expect(loadSchema).toHaveBeenCalledTimes(2);
+      expect(loadSchema).toHaveBeenCalledWith("https://example.com/a.json");
+      expect(loadSchema).toHaveBeenCalledWith("https://example.com/b.json");
+    });
+
     it("prefers body schema over query schema", async () => {
       loadSchema.mockResolvedValue({
         type: "object",
