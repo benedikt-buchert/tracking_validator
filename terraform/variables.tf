@@ -27,9 +27,9 @@ variable "region" {
 }
 
 variable "min_instances" {
-  description = "The minimum number of container instances for the service."
+  description = "Minimum number of container instances. Set to 1 to eliminate cold starts (~2-2.5s delay on first request after scale-to-zero). Cost: ~€12/month for one always-on instance."
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "max_instances" {

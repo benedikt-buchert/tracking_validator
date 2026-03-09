@@ -152,6 +152,19 @@ Throughput peaks around concurrency 50 with acceptable p99 latency. The Terrafor
 
 Cloud Run autoscaling was verified to scale out correctly when concurrent requests exceed the per-instance concurrency limit.
 
+### Cold starts and min_instances
+
+Measured cold start latency (local, remote schema host):
+
+| Phase | Duration |
+|---|---|
+| Node.js process startup | ~650ms |
+| First request (schema fetch + AJV compile) | ~150ms |
+| Cloud Run container boot overhead | ~1,500ms |
+| **Total cold start → first response** | **~2,300ms** |
+
+A 2+ second stall on the first request after scale-to-zero is noticeable for GTM/browser traffic. The Terraform variable `min_instances` defaults to `1` to keep one instance always warm. Set it to `0` to scale to zero during idle periods and accept occasional cold starts (saves ~€12/month).
+
 ### Rate limiting
 
 The default `RATE_LIMIT_MAX=100` per minute applies per IP per instance. This is appropriate for first-party GTM/browser traffic. If you run behind a proxy or load balancer that forwards a single IP, raise this value or disable it via `RATE_LIMIT_MAX=0` and enforce limits upstream.
